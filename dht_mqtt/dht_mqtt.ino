@@ -49,9 +49,9 @@ uint32_t status_sent = 0;
 // Initialize Adafruit_MQTT
 Adafruit_MQTT_Client mqtt(&client, MQTT_SERVER, MQTT_SERVERPORT, MQTT_USERNAME, MQTT_KEY);
 // Publish temp/humidity
-Adafruit_MQTT_Publish temp = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/house/temp/crawlspace");
-Adafruit_MQTT_Publish humidity = Adafruit_MQTT_Publish(&mqtt, MQTT_USERNAME "/house/humidity/crawlspace");
-
+Adafruit_MQTT_Publish temp = Adafruit_MQTT_Publish(&mqtt, "house/temp/" LOCATION);
+Adafruit_MQTT_Publish humidity = Adafruit_MQTT_Publish(&mqtt, "house/humidity/" LOCATION);
+Adafruit_MQTT_Publish stat = Adafruit_MQTT_Publish(&mqtt, "house/status/" LOCATION);
 
 void setup() {
   Serial.begin(9600);
@@ -77,26 +77,41 @@ void loop() {
     Serial.println("Failed to read from DHT");
   }
   else {
+    Serial.print("Temp: ");
+    Serial.print(t);
+    Serial.print("F\tHumidity: ");
+    Serial.print(h);
+    Serial.println("%");
     // Ensure that the connection to the MQTT broker is alive
-    MQTT_connect();
+    if(MQTT_connect()) {
 
-    // Publish via MQTT
-    Serial.print("Publishing.. ");
-    if (! temp.publish(t)) {
-      Serial.print("Temp Failed.. ");
+      if (!status_sent) {
+        if (! stat.publish("true")) {
+          Serial.print("Status failed.. ");
+        }
+        else {
+          Serial.print("Status OK! ");
+          status_sent = 1;
+        }
+      }
+      // Publish via MQTT
+      Serial.print("Publishing.. ");
+      if (! temp.publish(t)) {
+        Serial.print("Temp Failed.. ");
+      }
+      else {
+        Serial.print("Temp OK! ");
+      }
+
+      if (! humidity.publish(h)) {
+        Serial.print("Humidity Failed.. ");
+      }
+      else {
+        Serial.print("Humidity OK! ");
+      }
+      Serial.println();
     }
-    else {
-      Serial.print("Temp OK! ");
-    }
-    if (! humidity.publish(h)) {
-      Serial.print("Humidity Failed.. ");
-    }
-    else {
-      Serial.print("Humidity OK! ");
-    }
-    Serial.println();
   }
-
   // Renew DHCP if needed
   Ethernet.maintain();
 
