@@ -41,9 +41,6 @@ byte mac[] = { 0x90, 0xA2, 0xDA, 0x0E, 0x30, 0xF5 };
 #define MQTT_RETRIES     3
 
 // Initialize the Ethernet client library
-// with the IP address and port of the server
-// that you want to connect to (port 23 is default for telnet;
-// if you're using Processing's ChatServer, use  port 10002):
 EthernetClient client;
 
 // Have we sent the status packet (setup for the will packet)
