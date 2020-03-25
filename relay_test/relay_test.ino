@@ -8,6 +8,10 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   delay(1000);
+  pinMode(IN1,OUTPUT);
+  pinMode(IN2,OUTPUT);
+  pinMode(IN3,OUTPUT);
+  pinMode(IN4,OUTPUT);
 }
 
 void loop() {
@@ -25,6 +29,8 @@ void relaytest(int pin) {
   Serial.println(pin);
   Serial.println("  on");
   digitalWrite(pin, HIGH);
-  delay(1000);
+  delay(5000);
+  Serial.println("  off");
   digitalWrite(pin, LOW);
+  delay(5000);
 }
