@@ -1,4 +1,4 @@
-// DHT temp sensor to graphite via the Ethernet shield
+// Thermostat / DHT temp sensor to graphite via the Ethernet shield
 
 #include "DHT.h"
 #include <SPI.h>
