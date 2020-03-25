@@ -23,10 +23,16 @@
 // Connect a 10K resistor from pin 2 (data) to pin 1 (power) of the sensor
 DHT dht(DHTPIN, DHTTYPE);
 
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network:
-byte mac[] = {
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+#define LOC 0   // basement
+#define LOC 1   // crawlspace
+#if LOC
+#define LOCATION         "crawlspace"
+byte mac[] = { 0x90, 0xA2, 0xDA, 0x0F, 0x03, 0xA3 };
+#else
+#define LOCATION         "basement"
+byte mac[] = { 0x90, 0xA2, 0xDA, 0x0E, 0x30, 0xF5 };
+#endif
+
 
 #define MQTT_SERVER      "192.168.1.31"
 #define MQTT_SERVERPORT  1883
