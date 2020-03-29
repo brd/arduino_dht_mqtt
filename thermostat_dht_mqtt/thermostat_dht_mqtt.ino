@@ -285,7 +285,7 @@ int MQTT_connect() {
 
   // Set will
   // will(const char *topic, const char *payload, uint8_t qos, uint8_t retain)
-  mqtt.will("house/status/hvac", "false", 1, 1);
+  mqtt.will("house/status/"LOCATION, "false", 1, 1);
 
   while ((ret = mqtt.connect()) != 0 && loop <= MQTT_RETRIES) { // connect will return 0 for connected
     Serial.println(mqtt.connectErrorString(ret));
