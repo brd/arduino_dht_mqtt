@@ -49,7 +49,7 @@ const byte mac[] PROGMEM = { 0x90, 0xA2, 0xDA, 0x0E, 0x30, 0xF5 };
 EthernetClient client;
 
 // Have we sent the status packet (setup for the will packet)
-byte status_sent = 0;
+bool status_sent = false;
 // HVAC Mode (0 = off, 1 = heat, 2 = cool)
 byte hvac_mode = 0;
 float cur_temp = 0;
@@ -66,11 +66,13 @@ Adafruit_MQTT_Publish temp = Adafruit_MQTT_Publish(&mqtt, "house/temperature/" L
 Adafruit_MQTT_Publish humidity = Adafruit_MQTT_Publish(&mqtt, "house/humidity/" LOCATION);
 Adafruit_MQTT_Publish stat = Adafruit_MQTT_Publish(&mqtt, "house/status/" LOCATION);
 // Setup HVAC
-Adafruit_MQTT_Publish hvac_set_mode = Adafruit_MQTT_Publish(&mqtt, "house/hvac/set_mode");
-Adafruit_MQTT_Subscribe mqtt_get_mode = Adafruit_MQTT_Subscribe(&mqtt, "house/hvac/get_mode");
-Adafruit_MQTT_Subscribe mqtt_cur_temp = Adafruit_MQTT_Subscribe(&mqtt, "house/temperature/frontroom");
-Adafruit_MQTT_Subscribe mqtt_set_temp = Adafruit_MQTT_Subscribe(&mqtt, "house/hvac/set_temp");
-Adafruit_MQTT_Subscribe mqtt_set_fan = Adafruit_MQTT_Subscribe(&mqtt, "house/hvac/fan");
+Adafruit_MQTT_Publish   mqtt_get_cur_mode    = Adafruit_MQTT_Publish(  &mqtt, "house/hvac/get_cur_mode");
+Adafruit_MQTT_Subscribe mqtt_set_target_mode = Adafruit_MQTT_Subscribe(&mqtt, "house/hvac/set_target_mode");
+Adafruit_MQTT_Publish   hvac_get_target_mode = Adafruit_MQTT_Publish(  &mqtt, "house/hvac/get_target_mode");
+Adafruit_MQTT_Subscribe mqtt_cur_temp        = Adafruit_MQTT_Subscribe(&mqtt, "house/temperature/frontroom");
+Adafruit_MQTT_Subscribe mqtt_set_target_temp = Adafruit_MQTT_Subscribe(&mqtt, "house/hvac/set_target_temp");
+Adafruit_MQTT_Publish   mqtt_get_target_temp = Adafruit_MQTT_Publish(  &mqtt, "house/hvac/get_target_temp");
+Adafruit_MQTT_Subscribe mqtt_set_fan         = Adafruit_MQTT_Subscribe(&mqtt, "house/hvac/fan");
 
 void setup() {
   Serial.begin(9600);
@@ -108,12 +110,12 @@ void loop() {
         // Init
         // house/status/LOCATION = true
         // house/hvac/mode = 0
-        if (! stat.publish("true") && hvac_set_mode.publish("0") ) {
+        if (! stat.publish("true") && mqtt_get_cur_mode.publish("0") ) {
           Serial.println(F("Stat / mode publish failed"));
         }
         else {
           Serial.println(F("house/status/"LOCATION" -> MQTT"));
-          status_sent = 1;
+          status_sent = true;
         }
       }
       // Publish temp via MQTT
@@ -136,14 +138,14 @@ void loop() {
       for (mqtt_loop = 0; mqtt_loop < 60; mqtt_loop++) {
         Adafruit_MQTT_Subscribe *subscription;
         while (subscription = mqtt.readSubscription(1000)) {
-          if (subscription == &mqtt_get_mode) {
+          if (subscription == &mqtt_set_target_mode) {
             // Mode
-            Serial.print(F("MQTT -> house/hvac/get_mode: "));
-            Serial.println((char *)mqtt_get_mode.lastread);
+            Serial.print(F("MQTT -> house/hvac/set_target_mode: "));
+            Serial.println((char *)mqtt_set_target_mode.lastread);
             // Mode change
-            if (mqtt_get_mode.lastread != hvac_mode) {
+            if (mqtt_set_target_mode.lastread != hvac_mode) {
               // Off
-              if (mqtt_get_mode.lastread == 0) {
+              if (mqtt_set_target_mode.lastread == 0) {
                 if (cool_pin != false) {
                   digitalWrite(HEATPIN, LOW);
                   cool_pin = false;
@@ -154,10 +156,13 @@ void loop() {
                 }
               } // END OFf
               // Heat
-              if (mqtt_get_mode.lastread == 1) {
+              if (mqtt_set_target_mode.lastread == 1) {
                 // not needed?
               } // END Heat
-              hvac_mode = mqtt_get_mode.lastread;
+              hvac_mode = mqtt_set_target_mode.lastread;
+              // Publish mode change
+              hvac_get_target_mode.publish(int32_t(hvac_mode));
+
             } // END Mode Change
           }
           else if (subscription == &mqtt_cur_temp) {
@@ -166,11 +171,14 @@ void loop() {
             Serial.println((char *)mqtt_cur_temp.lastread);
             cur_temp = atof(mqtt_cur_temp.lastread);
           }
-          else if (subscription == &mqtt_set_temp) {
+          else if (subscription == &mqtt_set_target_temp) {
             // Desired temp
-            Serial.print(F("MQTT -> home/hvac/set_temp: "));
-            Serial.println((char *)mqtt_set_temp.lastread);
-            set_temp = atof(mqtt_set_temp.lastread);
+            Serial.print(F("MQTT -> home/hvac/set_target_temp: "));
+            set_temp = atof(mqtt_set_target_temp.lastread);
+            Serial.println(set_temp);
+            Serial.print(F("home/hvac/get_target_temp -> MQTT: "));
+            Serial.println(set_temp);
+            mqtt_get_target_temp.publish(set_temp);
           }
           else if (subscription == &mqtt_set_fan) {
             // Fan
@@ -268,6 +276,8 @@ void run_hvac() {
       }
       break;
   }
+  // Publish to MQTT
+  mqtt_get_cur_mode.publish(int32_t(hvac_mode));
 }
 
 
